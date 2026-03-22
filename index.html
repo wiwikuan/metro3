@@ -66,17 +66,17 @@
     <span id="error-message" class="error-message"></span>
 	<p><br />快速設定：</p>
     <div class="preset-buttons">
-        <button onclick="setPreset('0.5')">八分</button>
-        <button onclick="setPreset('0.333,0.666')">三連音</button>
-        <button onclick="setPreset('0.25,0.5,0.75')">十六分</button>
-        <button onclick="setPreset('0.75')">附點</button>
-        <button onclick="setPreset('0.666')">66% Swing</button>
+        <button onclick="setPreset('1/2')">八分</button>
+        <button onclick="setPreset('1/3 2/3')">三連音</button>
+        <button onclick="setPreset('1/4 2/4 3/4')">十六分</button>
+        <button onclick="setPreset('3/4')">附點</button>
+        <button onclick="setPreset('2/3')">66% Swing</button>
     </div>
     <div class="preset-buttons">
-        <button onclick="setPreset('0.2,0.4,0.6,0.8')">五連音</button>
-        <button onclick="setPreset('0.166,0.333,0.5,0.666,0.833')">六連音</button>
-        <button onclick="setPreset('0.143,0.286,0.429,0.571,0.714,0.857')">七連音</button>
-        <button onclick="setPreset('0.333,0.5,0.666')">二對三</button>
+        <button onclick="setPreset('1/5 2/5 3/5 4/5')">五連音</button>
+        <button onclick="setPreset('1/6 2/6 3/6 4/6 5/6')">六連音</button>
+        <button onclick="setPreset('1/7 2/7 3/7 4/7 5/7 6/7')">七連音</button>
+        <button onclick="setPreset('1/3 1/2 2/3')">二對三</button>
         <button onclick="setPreset('0.58')">有點 Swing</button>
     </div>
     <div class="preset-buttons">
@@ -115,7 +115,7 @@
     function scheduleNote(time) {
         // 振盪器
         const osc = audioContext.createOscillator();
-        osc.type = 'square';
+        osc.type = 'triangle';
         osc.frequency.value = noteFrequency;
         
         // 音量
@@ -219,13 +219,27 @@
         if (!inputString || inputString.trim() === '') {
             return [];
         }
-        
+
         try {
-            const values = inputString.split(',').map(s => s.trim()).filter(s => s !== '');
+            const rawValues = inputString.replace(/\s*,\s*/g, ' ').split(/\s+/).filter(s => s !== '');
             const validPositions = [];
             
-            for (let value of values) {
-                const num = parseFloat(value);
+            for (let value of rawValues) {
+                const num = (() => {
+                    if (value.includes('/')) {
+                        const parts = value.split('/');
+                        const numerator = parseFloat(parts[0].trim());
+                        const denominator = parseFloat(parts[1].trim());
+                        
+                        if (parts.length !== 2 || isNaN(numerator) || isNaN(denominator) || denominator === 0) {
+                            return NaN;
+                        }
+                        return numerator / denominator;
+                    } else {
+                        return parseFloat(value);
+                    }
+                })();
+                
                 if (isNaN(num)) continue;
                 if (num > 0 && num < 1) {
                     validPositions.push(num);
@@ -233,9 +247,10 @@
             }
             
             // 排序並去重
-            return [...new Set(validPositions)].sort();
+            return [...new Set(validPositions)].sort((a, b) => a - b);
         } catch (e) {
-            throw new Error('解析錯誤');
+            console.error("parseSubBeats 運行錯誤:", e);
+            throw new Error('解析子節拍輸入時發生內部錯誤。');
         }
     }
 
